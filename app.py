@@ -107,43 +107,235 @@ def show_progress():
 
 
 # ------------------------------------------------------------
+# DOCX Export Functions
+# ------------------------------------------------------------
+def create_docx_from_text(title: str, content: str) -> io.BytesIO:
+    """Create a DOCX document from text content."""
+    if not HAS_DOCX:
+        return None
+    
+    doc = Document()
+    doc.add_heading(title, level=1)
+    doc.add_paragraph(content)
+    
+    # Save to BytesIO buffer
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+def create_survey_docx() -> io.BytesIO:
+    """Create DOCX for Survey stage."""
+    if not HAS_DOCX:
+        return None
+    
+    doc = Document()
+    doc.add_heading(f"Survey: {st.session_state.get('article_title', 'Untitled')}", level=1)
+    
+    doc.add_heading("Article Gist", level=2)
+    doc.add_paragraph(st.session_state.get("survey_gist", ""))
+    
+    doc.add_heading("AI Usage", level=2)
+    ai_flag = st.session_state.ai_flags.get("Survey", {})
+    doc.add_paragraph(f"AI Used: {'Yes' if ai_flag.get('used') else 'No'}")
+    if ai_flag.get('note'):
+        doc.add_paragraph(f"Details: {ai_flag.get('note')}")
+    
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+def create_questions_docx() -> io.BytesIO:
+    """Create DOCX for Question stage."""
+    if not HAS_DOCX:
+        return None
+    
+    doc = Document()
+    doc.add_heading(f"Questions: {st.session_state.get('article_title', 'Untitled')}", level=1)
+    
+    doc.add_heading("Research Questions", level=2)
+    for i, q in enumerate(st.session_state.get("questions", []), 1):
+        if q.strip():
+            doc.add_paragraph(q, style='List Number')
+    
+    doc.add_heading("AI Usage", level=2)
+    ai_flag = st.session_state.ai_flags.get("Question", {})
+    doc.add_paragraph(f"AI Used: {'Yes' if ai_flag.get('used') else 'No'}")
+    if ai_flag.get('note'):
+        doc.add_paragraph(f"Details: {ai_flag.get('note')}")
+    
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+def create_annotations_docx() -> io.BytesIO:
+    """Create DOCX for Read + Annotate stage."""
+    if not HAS_DOCX:
+        return None
+    
+    doc = Document()
+    doc.add_heading(f"Annotations: {st.session_state.get('article_title', 'Untitled')}", level=1)
+    
+    doc.add_heading("Annotations", level=2)
+    for i, ann in enumerate(st.session_state.get("annotations", []), 1):
+        doc.add_heading(f"Annotation {i}", level=3)
+        doc.add_paragraph(f"Category: {ann.get('color', 'Unknown')}")
+        if ann.get('spider'):
+            doc.add_paragraph(f"SPIDER Tag: {ann.get('spider')}")
+        doc.add_paragraph(f"Text: {ann.get('text', '')}")
+        if ann.get('comment'):
+            doc.add_paragraph(f"Comment: {ann.get('comment')}")
+    
+    doc.add_heading("AI Usage", level=2)
+    ai_flag = st.session_state.ai_flags.get("Read + Annotate", {})
+    doc.add_paragraph(f"AI Used: {'Yes' if ai_flag.get('used') else 'No'}")
+    if ai_flag.get('note'):
+        doc.add_paragraph(f"Details: {ai_flag.get('note')}")
+    
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+def create_recall_docx() -> io.BytesIO:
+    """Create DOCX for Recall stage."""
+    if not HAS_DOCX:
+        return None
+    
+    doc = Document()
+    doc.add_heading(f"Recall (SPIDER): {st.session_state.get('article_title', 'Untitled')}", level=1)
+    
+    for k in SPIDER_KEYS:
+        doc.add_heading(f"{k} – {SPIDER_LABELS[k]}", level=2)
+        doc.add_paragraph(st.session_state.recall.get(k, ""))
+    
+    doc.add_heading("AI Usage", level=2)
+    ai_flag = st.session_state.ai_flags.get("Recall", {})
+    doc.add_paragraph(f"AI Used: {'Yes' if ai_flag.get('used') else 'No'}")
+    if ai_flag.get('note'):
+        doc.add_paragraph(f"Details: {ai_flag.get('note')}")
+    
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+def create_review_docx() -> io.BytesIO:
+    """Create DOCX for Review stage."""
+    if not HAS_DOCX:
+        return None
+    
+    doc = Document()
+    doc.add_heading(f"Review Verification: {st.session_state.get('article_title', 'Untitled')}", level=1)
+    
+    doc.add_heading("Verification Decisions", level=2)
+    for k in SPIDER_KEYS:
+        decision = st.session_state.review_checks.get(k, "")
+        doc.add_paragraph(f"{k} – {SPIDER_LABELS[k]}: {decision if decision else '—'}")
+    
+    doc.add_heading("AI Usage", level=2)
+    ai_flag = st.session_state.ai_flags.get("Review", {})
+    doc.add_paragraph(f"AI Used: {'Yes' if ai_flag.get('used') else 'No'}")
+    if ai_flag.get('note'):
+        doc.add_paragraph(f"Details: {ai_flag.get('note')}")
+    
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+def create_final_review_docx() -> io.BytesIO:
+    """Create DOCX for Write Review stage."""
+    if not HAS_DOCX:
+        return None
+    
+    doc = Document()
+    doc.add_heading(f"Review: {st.session_state.get('article_title', 'Untitled')}", level=1)
+    
+    doc.add_heading("Complete Review", level=2)
+    doc.add_paragraph(st.session_state.get("final_review", ""))
+    
+    doc.add_heading("AI Usage", level=2)
+    ai_flag = st.session_state.ai_flags.get("Write Review", {})
+    doc.add_paragraph(f"AI Used: {'Yes' if ai_flag.get('used') else 'No'}")
+    if ai_flag.get('note'):
+        doc.add_paragraph(f"Details: {ai_flag.get('note')}")
+    
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+# ------------------------------------------------------------
 # Text extraction
 # ------------------------------------------------------------
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     if not HAS_PDF:
         return "[PDF support not available – install pymupdf]"
-    doc = fitz.open(stream=file_bytes, filetype="pdf")
-    pages = [page.get_text() for page in doc]
-    doc.close()
-    return "\n\n".join(pages)
+    try:
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        pages = [page.get_text() for page in doc]
+        doc.close()
+        text = "\n\n".join(pages)
+        if not text.strip():
+            return "[PDF loaded but no text content extracted. File may be image-based or corrupted.]"
+        return text
+    except Exception as e:
+        return f"[Error reading PDF: {str(e)}]"
 
 
 def extract_text_from_docx(file_bytes: bytes) -> str:
     if not HAS_DOCX:
         return "[DOCX support not available – install python-docx]"
-    doc = Document(io.BytesIO(file_bytes))
-    return "\n\n".join(p.text for p in doc.paragraphs if p.text.strip())
+    try:
+        doc = Document(io.BytesIO(file_bytes))
+        text = "\n\n".join(p.text for p in doc.paragraphs if p.text.strip())
+        if not text.strip():
+            return "[DOCX loaded but no text content found in paragraphs.]"
+        return text
+    except Exception as e:
+        return f"[Error reading DOCX: {str(e)}]"
 
 
 def extract_text_from_epub(file_bytes: bytes) -> str:
     if not HAS_EPUB:
         return "[EPUB support not available – install ebooklib beautifulsoup4]"
-    book = epub.read_epub(io.BytesIO(file_bytes))
-    texts = []
-    for item in book.get_items():
-        if item.get_type() == 9:
-            soup = BeautifulSoup(item.get_content(), "lxml")
-            texts.append(soup.get_text(separator="\n", strip=True))
-    return "\n\n".join(texts)
+    try:
+        book = epub.read_epub(io.BytesIO(file_bytes))
+        texts = []
+        for item in book.get_items():
+            if item.get_type() == 9:
+                soup = BeautifulSoup(item.get_content(), "lxml")
+                texts.append(soup.get_text(separator="\n", strip=True))
+        text = "\n\n".join(texts)
+        if not text.strip():
+            return "[EPUB loaded but no text content extracted.]"
+        return text
+    except Exception as e:
+        return f"[Error reading EPUB: {str(e)}]"
 
 
 def extract_text(uploaded_file) -> str:
     name = uploaded_file.name.lower()
-    data = uploaded_file.read()
+    try:
+        data = uploaded_file.read()
+    except Exception as e:
+        return f"[Error reading file: {str(e)}]"
 
     if len(data) > MAX_FILE_SIZE_BYTES:
-        st.error(f"File exceeds the {MAX_FILE_SIZE_MB} MB limit.")
-        return ""
+        return f"File exceeds the {MAX_FILE_SIZE_MB} MB limit."
+
+    if len(data) == 0:
+        return "[File is empty.]"
 
     if name.endswith(".pdf"):
         return extract_text_from_pdf(data)
@@ -152,10 +344,15 @@ def extract_text(uploaded_file) -> str:
     elif name.endswith(".epub"):
         return extract_text_from_epub(data)
     elif name.endswith(".txt"):
-        return data.decode("utf-8", errors="replace")
+        try:
+            text = data.decode("utf-8", errors="replace")
+            if not text.strip():
+                return "[TXT file loaded but is empty.]"
+            return text
+        except Exception as e:
+            return f"[Error reading TXT: {str(e)}]"
     else:
-        st.warning("Unsupported format. Please upload PDF, DOCX, EPUB or TXT.")
-        return ""
+        return "[Unsupported format. Please upload PDF, DOCX, EPUB or TXT.]"
 
 
 # ------------------------------------------------------------
@@ -354,25 +551,42 @@ if not st.session_state.article_text:
 You can return to any stage at any time from the sidebar.
         """)
 
-    uploaded = st.file_uploader(
-        "Upload article or book chapter",
-        type=["pdf", "docx", "epub", "txt"],
-        help=f"Maximum size {MAX_FILE_SIZE_MB} MB",
-    )
-    paste = st.text_area("Or paste text here", height=200)
+    col_upload, col_paste = st.columns(2)
+    
+    with col_upload:
+        st.markdown("**Upload file**")
+        uploaded = st.file_uploader(
+            "Upload article or book chapter",
+            type=["pdf", "docx", "epub", "txt"],
+            help=f"Maximum size {MAX_FILE_SIZE_MB} MB",
+            key="file_upload_widget",
+        )
 
+    with col_paste:
+        st.markdown("**Or paste text**")
+        paste = st.text_area("Or paste text here", height=200, key="paste_text_widget")
+
+    # Process upload
     if uploaded is not None:
         with st.spinner("Extracting text…"):
             text = extract_text(uploaded)
-            if text.strip():
+            # Check if extraction returned an error message (starts with [)
+            if text.startswith("["):
+                st.error(f"❌ {text}")
+            elif text.strip():
                 st.session_state.article_text = text
                 st.session_state.article_title = uploaded.name
-                st.success(f"Loaded: {uploaded.name} ({len(text):,} characters)")
+                st.session_state.current_stage = "Survey"
+                st.success(f"✅ Loaded: {uploaded.name} ({len(text):,} characters)")
                 st.rerun()
+            else:
+                st.error("❌ Could not extract text from file. The file may be empty or corrupted.")
 
-    if paste.strip() and st.button("Use pasted text"):
+    # Process paste
+    elif paste.strip() and st.button("Use pasted text", use_container_width=True, key="paste_btn"):
         st.session_state.article_text = paste.strip()
         st.session_state.article_title = "Pasted text"
+        st.session_state.current_stage = "Survey"
         st.rerun()
 
     st.stop()
@@ -403,34 +617,23 @@ if stage == "Survey":
         """)
 
     # ---------- Parallel layout ----------
-    left, right = st.columns([3, 2])
+    st.markdown("**Split View: Skim left, write right. Keep both panels visible.**")
+    left, right = st.columns([3, 2], gap="medium")
 
     with left:
-        st.markdown("##### Article — skim here")
-        # Scrollable HTML container is more reliable than disabled text_area for long documents
-        import html as _html
-        safe_text = _html.escape(st.session_state.article_text)
-        st.markdown(
-            f"""
-            <div style="
-                height: 520px;
-                overflow-y: auto;
-                border: 1px solid #D9D5CC;
-                border-radius: 6px;
-                padding: 14px 16px;
-                background: #FFFFFF;
-                font-size: 0.92rem;
-                line-height: 1.55;
-                white-space: pre-wrap;
-                font-family: Georgia, 'Times New Roman', serif;
-            ">{safe_text}</div>
-            """,
-            unsafe_allow_html=True,
+        st.markdown("##### 📄 Article — skim here")
+        # Use a disabled text_area for better scrolling reliability in Streamlit
+        st.text_area(
+            "Article text (scroll to read entire document)",
+            value=st.session_state.article_text,
+            height=520,
+            disabled=True,
+            label_visibility="collapsed",
         )
-        st.caption(f"{len(st.session_state.article_text):,} characters · scroll to skim the whole text")
+        st.caption(f"📊 {len(st.session_state.article_text):,} characters · Scroll freely to skim entire text")
 
     with right:
-        st.markdown("##### Your gist")
+        st.markdown("##### ✍️ Your gist")
         gist_val = st.text_area(
             "Gist",
             value=st.session_state.survey_gist,
@@ -440,18 +643,35 @@ if stage == "Survey":
             key="survey_gist_box",
         )
         st.session_state.survey_gist = gist_val
-        st.caption("Write here while you skim. Both panels stay visible.")
+        
+        # Word count tracker
+        word_count = len(gist_val.split()) if gist_val.strip() else 0
+        st.caption(f"💬 {word_count} words · Write here while you skim. Both panels stay visible.")
 
     # AI flag + save
     render_ai_flag("Survey")
 
-    if st.button("Save Survey & continue", type="primary", key="btn_save_survey"):
-        if not st.session_state.survey_gist.strip():
-            st.warning("Please write a gist before continuing.")
-        else:
-            mark_complete("Survey")
-            st.session_state.current_stage = "Question"
-            st.rerun()
+    # Download button for Survey
+    dl_col, save_col = st.columns(2)
+    with dl_col:
+        survey_docx = create_survey_docx()
+        if survey_docx:
+            st.download_button(
+                "⬇️ Download as DOCX",
+                data=survey_docx,
+                file_name=f"Survey_{st.session_state.get('article_title', 'Untitled').replace(' ', '_')}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True,
+            )
+    
+    with save_col:
+        if st.button("Save Survey & continue", type="primary", key="btn_save_survey", use_container_width=True):
+            if not st.session_state.survey_gist.strip():
+                st.warning("Please write a gist before continuing.")
+            else:
+                mark_complete("Survey")
+                st.session_state.current_stage = "Question"
+                st.rerun()
 
 # ----- QUESTION -----
 elif stage == "Question":
@@ -471,10 +691,24 @@ elif stage == "Question":
         st.rerun()
 
     render_ai_flag("Question")
-    if st.button("Save Questions & continue", type="primary"):
-        mark_complete("Question")
-        st.session_state.current_stage = "Read + Annotate"
-        st.rerun()
+    
+    dl_col, save_col = st.columns(2)
+    with dl_col:
+        q_docx = create_questions_docx()
+        if q_docx:
+            st.download_button(
+                "⬇️ Download as DOCX",
+                data=q_docx,
+                file_name=f"Questions_{st.session_state.get('article_title', 'Untitled').replace(' ', '_')}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True,
+            )
+    
+    with save_col:
+        if st.button("Save Questions & continue", type="primary", use_container_width=True):
+            mark_complete("Question")
+            st.session_state.current_stage = "Read + Annotate"
+            st.rerun()
 
 # ----- READ + ANNOTATE -----
 elif stage == "Read + Annotate":
@@ -538,10 +772,24 @@ elif stage == "Read + Annotate":
             st.rerun()
 
     render_ai_flag("Read + Annotate")
-    if st.button("Save Annotations & continue", type="primary"):
-        mark_complete("Read + Annotate")
-        st.session_state.current_stage = "Recall"
-        st.rerun()
+    
+    dl_col, save_col = st.columns(2)
+    with dl_col:
+        ann_docx = create_annotations_docx()
+        if ann_docx:
+            st.download_button(
+                "⬇️ Download as DOCX",
+                data=ann_docx,
+                file_name=f"Annotations_{st.session_state.get('article_title', 'Untitled').replace(' ', '_')}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True,
+            )
+    
+    with save_col:
+        if st.button("Save Annotations & continue", type="primary", use_container_width=True):
+            mark_complete("Read + Annotate")
+            st.session_state.current_stage = "Recall"
+            st.rerun()
 
 # ----- RECALL -----
 elif stage == "Recall":
@@ -562,10 +810,24 @@ elif stage == "Recall":
             key=f"recall_{k}",
         )
     render_ai_flag("Recall")
-    if st.button("Save Recall & continue", type="primary"):
-        mark_complete("Recall")
-        st.session_state.current_stage = "Review"
-        st.rerun()
+    
+    dl_col, save_col = st.columns(2)
+    with dl_col:
+        recall_docx = create_recall_docx()
+        if recall_docx:
+            st.download_button(
+                "⬇️ Download as DOCX",
+                data=recall_docx,
+                file_name=f"Recall_{st.session_state.get('article_title', 'Untitled').replace(' ', '_')}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True,
+            )
+    
+    with save_col:
+        if st.button("Save Recall & continue", type="primary", use_container_width=True):
+            mark_complete("Recall")
+            st.session_state.current_stage = "Review"
+            st.rerun()
 
 # ----- REVIEW -----
 elif stage == "Review":
@@ -595,10 +857,24 @@ elif stage == "Review":
         )
 
     render_ai_flag("Review")
-    if st.button("Save Review & continue", type="primary"):
-        mark_complete("Review")
-        st.session_state.current_stage = "Write Review"
-        st.rerun()
+    
+    dl_col, save_col = st.columns(2)
+    with dl_col:
+        review_docx = create_review_docx()
+        if review_docx:
+            st.download_button(
+                "⬇️ Download as DOCX",
+                data=review_docx,
+                file_name=f"Review_{st.session_state.get('article_title', 'Untitled').replace(' ', '_')}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True,
+            )
+    
+    with save_col:
+        if st.button("Save Review & continue", type="primary", use_container_width=True):
+            mark_complete("Review")
+            st.session_state.current_stage = "Write Review"
+            st.rerun()
 
 # ----- WRITE REVIEW -----
 elif stage == "Write Review":
@@ -621,12 +897,24 @@ elif stage == "Write Review":
         placeholder="Write your complete review of the article here…",
     )
     render_ai_flag("Write Review")
+    
+    # Download button
+    final_docx = create_final_review_docx()
+    if final_docx:
+        st.download_button(
+            "⬇️ Download Final Review as DOCX",
+            data=final_docx,
+            file_name=f"FinalReview_{st.session_state.get('article_title', 'Untitled').replace(' ', '_')}.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            use_container_width=True,
+        )
+    
     col_a, col_b = st.columns(2)
     with col_a:
-        if st.button("Save draft"):
+        if st.button("Save draft", use_container_width=True):
             mark_complete("Write Review")
             st.success("Draft saved.")
     with col_b:
-        if st.button("Mark complete", type="primary"):
+        if st.button("Mark complete", type="primary", use_container_width=True):
             mark_complete("Write Review")
             st.success("Review marked complete. You may still return to any stage and iterate. Use the sidebar to Export.")
